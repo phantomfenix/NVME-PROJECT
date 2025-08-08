@@ -1,66 +1,50 @@
 #!/bin/env python3.9
 import subprocess
 import json
-import logging
-from Test import Test
-
-class ExampleTest(Test):
-    def __init__(self, name="ExampleTest", description="NVMe id-ctrl comparison test"):
-        super().__init__(name, description)
-        self.ignore_fields = ["sn", "fguid", "unvmcap", "subnqn"]
+class ExampleTest:
+    def __init__(self, nvme_interface=None, logger=None):
+        self.nvme_interface = nvme_interface  # Could be AdminPassthruWrapper or None
+        self.logger = logger or print
+        self.ignore_fields = {"sn", "fguid", "unvmcap", "subnqn"}
 
     def run(self):
-        logging.info("Starting NVMe id-ctrl test")
+        self.logger.info("Starting Example Test: Compare nvme id-ctrl output")
 
-        # Ask dynamically if admin passthru should be used
-        use_admin = input("Do you want to run this test using admin-passthru? (y/n): ").strip().lower() == 'y'
-
+        # Step 1: Collect current id-ctrl data
+        if self.nvme_interface:
+            self.logger.debug("Collecting id-ctrl data via Admin Passthru...")
+            output = self.nvme_interface.send_passthru_cmd(opcode='0x06', data_len=4096)
+            # Here you would parse the binary data from passthru into JSON if needed
+            raise NotImplementedError("Binary parsing for passthru not yet implemented")
+        else:
+            self.logger.debug("Collecting id-ctrl data via NVMe CLI...")
+            output = subprocess.check_output(['nvme', 'id-ctrl', '/dev/nvme0'], text=True)
+        
+        # Step 2: Parse to JSON
         try:
-            # Decide which command to run
-            if use_admin:
-                logging.info("Running Identify via admin-passthru")
-                cmd = [
-                    "nvme", "admin-passthru", "/dev/nvme0",
-                    "--opcode=0x06", "--namespace-id=0x1",
-                    "--data-len=4096", "--read", "--output-format=json"
-                ]
-            else:
-                logging.info("Running Identify via nvme id-ctrl")
-                cmd = ["nvme", "id-ctrl", "/dev/nvme0", "--output-format=json"]
-
-            # Execute the command
-            result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-            device_data = json.loads(result.stdout)
-
-            # Load reference JSON
-            with open("id-ctrl-main.json", "r") as f:
-                reference_data = json.load(f)
-
-            # Compare values
-            errors = 0
-            for key, expected_value in reference_data.items():
-                if key in self.ignore_fields:
-                    continue
-                if device_data.get(key) != expected_value:
-                    logging.error(f"Mismatch in '{key}': expected {expected_value}, got {device_data.get(key)}")
-                    errors += 1
-                else:
-                    logging.info(f"Match: {key} = {expected_value}")
-
-            # Result
-            if errors == 0:
-                logging.info("Test PASSED")
-                self.passed = True
-            else:
-                logging.error(f"Test FAILED with {errors} mismatches")
-                self.passed = False
-
-        except subprocess.CalledProcessError as e:
-            logging.error(f"Command execution failed: {e.stderr}")
-            self.passed = False
+            current_data = json.loads(output)
         except json.JSONDecodeError:
-            logging.error("Failed to parse JSON output")
-            self.passed = False
-        except FileNotFoundError:
-            logging.error("Reference file id-ctrl-main.json not found")
-            self.passed = False
+            self.logger.error("Failed to parse nvme id-ctrl output as JSON")
+            return
+
+        # Step 3: Load reference JSON
+        with open('id-ctrl-main.json', 'r') as f:
+            reference_data = json.load(f)
+
+        # Step 4: Compare
+        errors = 0
+        for key, expected_value in reference_data.items():
+            if key in self.ignore_fields:
+                continue
+            current_value = current_data.get(key)
+            if current_value != expected_value:
+                self.logger.error(f"Mismatch in '{key}': Expected {expected_value}, Found {current_value}")
+                errors += 1
+            else:
+                self.logger.debug(f"Match in '{key}': {expected_value}")
+
+        # Step 5: Result
+        if errors == 0:
+            self.logger.info("Test PASSED - All fields match.")
+        else:
+            self.logger.warning(f"Test FAILED - {errors} mismatches found.")

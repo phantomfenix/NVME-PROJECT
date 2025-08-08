@@ -1,34 +1,56 @@
 #!/bin/env python3.9
-import sys
+
 import logging
+import sys
+from example_test import ExampleTest
+from admin_passthru_wrapper import AdminPassthruWrapper
+
+def setup_logger(name='test_manager_logger', log_file='test_manager.log', level=logging.DEBUG):
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+
+    # Console Handler
+    ch = logging.StreamHandler(sys.stdout)
+    ch.setLevel(logging.INFO)
+
+    # File Handler
+    fh = logging.FileHandler(log_file)
+    fh.setLevel(level)
+
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    ch.setFormatter(formatter)
+    fh.setFormatter(formatter)
+
+    if not logger.handlers:
+        logger.addHandler(ch)
+        logger.addHandler(fh)
+
+    return logger
+
 
 class TestManager:
-    def __init__(self, logger=None):
-        self.tests = []
-        self.logger = logger or self._setup_logger()
+    def __init__(self):
+        self.logger = setup_logger()
 
-    def _setup_logger(self):
-        """Configure the default logger for the Test Manager."""
-        logger = logging.getLogger('TestManager')
-        logger.setLevel(logging.DEBUG)
-        ch = logging.StreamHandler(sys.stdout)
-        ch.setLevel(logging.DEBUG)  # Show all log levels in console
-        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-        ch.setFormatter(formatter)
-        if not logger.handlers:
-            logger.addHandler(ch)
-        return logger
+    def run(self):
+        self.logger.info("Starting Test Manager...")
 
-    def add_test(self, name, func):
-        """Register a test by providing a name and a function."""
-        self.tests.append((name, func))
+        # Ask user if they want to use Admin Passthru
+        use_passthru = input("Do you want to use Admin Passthru? (y/n): ").strip().lower()
+        if use_passthru == 'y':
+            self.logger.info("Using Admin Passthru Wrapper")
+            nvme_interface = AdminPassthruWrapper('/dev/nvme0')
+        else:
+            self.logger.info("Using standard NVMe CLI commands")
+            nvme_interface = None  # Standard mode (no passthru)
 
-    def run_all(self):
-        """Execute all registered tests."""
-        for name, func in self.tests:
-            self.logger.info(f"=== Running test: {name} ===")
-            try:
-                result = func(self.logger)  # Pass the logger to the test function
-                self.logger.info(f"Result: {result}\n")
-            except Exception as e:
-                self.logger.error(f"Test '{name}' failed: {str(e)}\n")
+        # Run the Example Test
+        test = ExampleTest(nvme_interface, logger=self.logger)
+        test.run()
+
+        self.logger.info("Test Manager finished.")
+
+
+if __name__ == '__main__':
+    manager = TestManager()
+    manager.run()
