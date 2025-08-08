@@ -1,3 +1,4 @@
+#!/bin/env python3.9
 from test_manager import TestManager
 from tests.admin_passthru_test import AdminPassthruTest
 from tests.example_test import ExampleTest

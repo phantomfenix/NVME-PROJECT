@@ -1,4 +1,5 @@
-iimport subprocess
+#!/bin/env python3.9
+import subprocess
 import json
 import logging
 from Test import Test
