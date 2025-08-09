@@ -1,14 +1,21 @@
 #!/bin/env python3.9
 from test_manager import TestManager
-from tests.admin_passthru_test import AdminPassthruTest
-from tests.example_test import ExampleTest
+from Test.admin_passthru_wrapper import AdminPassthruWrapper
+from Test.example_test import ExampleTest
 
 if __name__ == "__main__":
-    tm = TestManager()
+    use_passthru = input("Do you want to use Admin Passthru? (y/n): ").strip().lower() == 'y'
+    
+    admin_wrapper = None
+    if use_passthru:
+        admin_wrapper = AdminPassthruWrapper("/dev/nvme0")
+
+    tm = TestManager(admin_wrapper=admin_wrapper)
 
     # Register tests
-    tm.add_test("Admin Passthru Test", AdminPassthruTest)
     tm.add_test("Example Test", ExampleTest)
 
-    # Execute all registered tests
+    # Run all registered tests
     tm.run_all()
+
+    tm = TestManager(admin_wrapper=admin_wrapper)

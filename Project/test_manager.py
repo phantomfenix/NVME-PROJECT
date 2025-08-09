@@ -2,8 +2,8 @@
 
 import logging
 import sys
-from example_test import ExampleTest
-from admin_passthru_wrapper import AdminPassthruWrapper
+from Test.example_test import ExampleTest
+from Test.admin_passthru_wrapper import AdminPassthruWrapper
 
 def setup_logger(name='test_manager_logger', log_file='test_manager.log', level=logging.DEBUG):
     logger = logging.getLogger(name)
