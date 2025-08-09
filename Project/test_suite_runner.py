@@ -12,10 +12,8 @@ if __name__ == "__main__":
 
     tm = TestManager(admin_wrapper=admin_wrapper)
 
-    # Register tests
+    # Registrar tests
     tm.add_test("Example Test", ExampleTest)
 
-    # Run all registered tests
+    # Ejecutar todos los tests
     tm.run_all()
-
-    tm = TestManager(admin_wrapper=admin_wrapper)

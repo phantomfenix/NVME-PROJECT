@@ -4,8 +4,8 @@ import struct
 import os
 import logging
 
-# Constants for NVMe Admin Passthru
-NVME_IOCTL_ADMIN_CMD = 0xC0484E41  # IOCTL code for admin commands (from nvme-cli headers)
+# IOCTL para comandos Admin Passthru
+NVME_IOCTL_ADMIN_CMD = 0xC0484E41  # tomado de nvme-cli headers
 
 class AdminPassthruWrapper:
     def __init__(self, device_path, logger=None):
@@ -14,12 +14,7 @@ class AdminPassthruWrapper:
 
     def send_passthru_cmd(self, opcode, data_len=4096, nsid=0):
         """
-        Send an NVMe Admin Passthru command to the given device.
-
-        :param opcode: NVMe admin opcode (int or hex string, e.g., 0x06 for id-ctrl)
-        :param data_len: Expected data buffer size
-        :param nsid: Namespace ID (0 for controller)
-        :return: bytes buffer with the command output
+        Enviar comando NVMe Admin Passthru al dispositivo.
         """
         if isinstance(opcode, str):
             opcode = int(opcode, 16)
@@ -27,7 +22,7 @@ class AdminPassthruWrapper:
         self.logger.debug(f"Opening device {self.device_path} for passthru command...")
         fd = os.open(self.device_path, os.O_RDWR)
 
-        # Allocate buffer
+        # Buffer de datos
         data_buf = bytearray(data_len)
 
         # NVMe passthru struct from nvme-cli:
@@ -54,7 +49,6 @@ class AdminPassthruWrapper:
         # This must be packed according to C struct layout for ioctl.
 
         fmt = 'B B H I Q Q Q Q I I I I I I I I I I I'
-        # Prepare struct with zeros except the values we want
         cmd_struct = struct.pack(
             fmt,
             opcode,        # opcode
@@ -62,7 +56,7 @@ class AdminPassthruWrapper:
             0,             # rsvd1
             nsid,          # nsid
             0, 0, 0,       # cdw2, cdw3, metadata
-            id(data_buf),  # addr (pointer to data buffer) - placeholder for example
+            id(data_buf),  # addr
             0,             # metadata_len
             data_len,      # data_len
             0, 0, 0, 0, 0, 0, 0,  # cdw10..cdw15
