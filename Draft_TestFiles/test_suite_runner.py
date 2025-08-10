@@ -13,6 +13,7 @@ def main():
         ("ExampleTest", ExampleTest),
         # ("OtraPrueba", OtraPrueba),
     ]
+    
 
     for testname, test_class in tests_to_run:
         test_manager = TestManager(
