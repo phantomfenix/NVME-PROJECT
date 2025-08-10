@@ -2,10 +2,19 @@
 
 import logging
 import sys
-from Test.example_test import ExampleTest
-from Test.admin_passthru_wrapper import AdminPassthruWrapper
+import os
+from datetime import datetime
 
-def setup_logger(name='test_manager_logger', log_file='test_manager.log', level=logging.DEBUG):
+#def setup_logger(name='test_manager_logger', log_file='test_manager.log', level=logging.DEBUG):
+    
+def setup_logger(name='test_manager_logger', base_dir='/root/Team3_REPO/NVME-PROJECT/Project/Result', level=logging.DEBUG):
+    #Create folder with date
+    fecha_hoy = datetime.now().strftime('%Y-%m-%d')
+    log_dir = os.path.join(base_dir, fecha_hoy)
+    os.makedirs(log_dir, exist_ok=True)
+
+    # File name with time
+    log_file = os.path.join(log_dir, f'test_manager_{datetime.now().strftime("%H-%M-%S")}.log')
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
@@ -29,28 +38,20 @@ def setup_logger(name='test_manager_logger', log_file='test_manager.log', level=
 
 
 class TestManager:
-    def __init__(self):
+    def __init__(self, admin_wrapper=None):
         self.logger = setup_logger()
+        self.admin_wrapper = admin_wrapper
+        self.tests = []
 
-    def run(self):
+    def add_test(self, name, test_class):
+        """Registrar un test con su nombre y clase"""
+        self.tests.append((name, test_class))
+
+    def run_all(self):
+        """Ejecutar todos los tests registrados"""
         self.logger.info("Starting Test Manager...")
-
-        # Ask user if they want to use Admin Passthru
-        use_passthru = input("Do you want to use Admin Passthru? (y/n): ").strip().lower()
-        if use_passthru == 'y':
-            self.logger.info("Using Admin Passthru Wrapper")
-            nvme_interface = AdminPassthruWrapper('/dev/nvme0')
-        else:
-            self.logger.info("Using standard NVMe CLI commands")
-            nvme_interface = None  # Standard mode (no passthru)
-
-        # Run the Example Test
-        test = ExampleTest(nvme_interface, logger=self.logger)
-        test.run()
-
+        for name, test_class in self.tests:
+            self.logger.info(f"Running test: {name}")
+            test_instance = test_class(self.admin_wrapper, logger=self.logger)
+            test_instance.run()
         self.logger.info("Test Manager finished.")
-
-
-if __name__ == '__main__':
-    manager = TestManager()
-    manager.run()

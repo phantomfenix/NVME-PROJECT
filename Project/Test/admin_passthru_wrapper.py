@@ -6,12 +6,45 @@ import logging
 
 # Constants for NVMe Admin Passthru
 NVME_IOCTL_ADMIN_CMD = 0xC0484E41  # IOCTL code for admin commands (from nvme-cli headers)
+## @class AdminPassthruWrapper
+#  @brief Encapsulates the sending of NVMe Admin Passthru commands to an NVMe device.
+#
+#  This class provides a Python interface for sending NVMe administration commands
+#  directly to the device using ioctl calls, replicating the behavior of the
+#  "nvme_admin_cmd" structure from the nvme-cli package.
 
 class AdminPassthruWrapper:
+    ## @brief Class constructor.
+    #  @param device_path NVMe device path (e.g., /dev/nvme0).
+    #  @param logger Logger instance for logging information and debugging.
+    
     def __init__(self, device_path, logger=None):
         self.device_path = device_path
         self.logger = logger or logging.getLogger(__name__)
-
+## @brief Send an NVMe Admin Passthru command to the specified device.
+    #
+    #  @details
+    #  This function packs the parameters into the `nvme_admin_cmd` structure according to
+    #  the C format expected by the NVMe driver in Linux and then sends it via `ioctl`.
+    #
+    #  The command can be used for operations such as:
+    #  - Identify Controller (`opcode = 0x06`)
+    #  - Identify Namespace
+    #  - Other supported NVMe administrative commands
+    #
+    #  @param opcode NVMe Admin operation code (int or hex string, e.g. `“0x06”`).
+    #  @param data_len Expected data buffer size (default 4096 bytes).
+    #  @param nsid NVMe namespace ID (0 for controller-level operations).
+    #  @return Buffer in bytes with the command response, or None in case of error.
+    #
+    #  @exception Exception If a failure occurs in the execution of the ioctl.
+    #
+    #  @code
+    #  wrapper = AdminPassthruWrapper(“/dev/nvme0”)
+    #  data = wrapper.send_passthru_cmd(0x06)
+    #  if data:
+    #      print(“Command executed successfully”)
+    #  @endcode
     def send_passthru_cmd(self, opcode, data_len=4096, nsid=0):
         """
         Send an NVMe Admin Passthru command to the given device.
@@ -28,6 +61,7 @@ class AdminPassthruWrapper:
         fd = os.open(self.device_path, os.O_RDWR)
 
         # Allocate buffer
+        #! Data buffer to receive the command response
         data_buf = bytearray(data_len)
 
         # NVMe passthru struct from nvme-cli:
@@ -52,7 +86,8 @@ class AdminPassthruWrapper:
         #   __u32 result;
         # };
         # This must be packed according to C struct layout for ioctl.
-
+#! NVMe Admin Passthru structure based on nvme-cli
+        #! @note The structure must be aligned according to the C layout for ioctl.
         fmt = 'B B H I Q Q Q Q I I I I I I I I I I I'
         # Prepare struct with zeros except the values we want
         cmd_struct = struct.pack(

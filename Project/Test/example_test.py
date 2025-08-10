@@ -1,11 +1,43 @@
 #!/bin/env python3.9
 import subprocess
 import json
+## @class ExampleTest
+#  @brief Test example to compare the output of the 'nvme id-ctrl' command with reference data.
+#
+#  This class runs a test that obtains information from the NVMe controller (using 'nvme-cli' or
+#  a wrapper such as 'AdminPassthruWrapper'), converts it to JSON, and compares it against a reference file
+#  to validate that there are no discrepancies.
 class ExampleTest:
+    ## @brief Class constructor.
+    #  @param nvme_interface Optional interface for sending NVMe commands (e.g., AdminPassthruWrapper).
+    #  @param logger Logger instance for logging information, warnings, and errors.
     def __init__(self, nvme_interface=None, logger=None):
         self.nvme_interface = nvme_interface  # Could be AdminPassthruWrapper or None
         self.logger = logger or print
         self.ignore_fields = {"sn", "fguid", "unvmcap", "subnqn"}
+        ## @brief Runs the 'nvme id-ctrl' comparison test.
+    #
+    #  @details
+    #  The test follows these steps:
+    #  1. Obtains NVMe controller information ('id-ctrl') using:
+    #     - The passthru interface if available, or
+    #     - The 'nvme-cli' command if it is not.
+    #  2. Converts the output to JSON format.
+    #  3. Loads a reference file ('id-ctrl-main.json').
+    #  4. Compares the fields, ignoring those defined in 'ignore_fields'.
+    #  5. Displays the comparison result.
+    #
+    #  @note
+    #  If 'nvme_interface' is present, it is assumed to return binary data, so a
+    #  binary-to-JSON parser would need to be implemented (not yet implemented).
+    #
+    #  @exception NotImplementedError If attempting to use the passthru interface without a binary parser implemented.
+    #  @exception json.JSONDecodeError If the output of 'nvme id-ctrl' is not valid JSON.
+    #
+    #  @code
+    #  test = ExampleTest()
+    #  test.run()
+    #  @endcode
 
     def run(self):
         self.logger.info("Starting Example Test: Compare nvme id-ctrl output")
@@ -28,9 +60,8 @@ class ExampleTest:
             return
 
         # Step 3: Load reference JSON
-        with open('id-ctrl-main.json', 'r') as f:
+        with open('/root/Team3_REPO/NVME-PROJECT/Project/Test/id-ctrl-main.json', 'r') as f:
             reference_data = json.load(f)
-
         # Step 4: Compare
         errors = 0
         for key, expected_value in reference_data.items():
