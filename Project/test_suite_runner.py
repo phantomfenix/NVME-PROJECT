@@ -35,7 +35,6 @@ if __name__ == "__main__":
         
     ## @brief Create TestManager instance with or without Admin Passthru.
     tm = TestManager(admin_wrapper=admin_wrapper)
-Correct-logs
     ## @brief Record available Test.
     # Register tests
     tm.add_test("Example Test", ExampleTest)
@@ -50,4 +49,3 @@ Correct-logs
 
     # Ejecutar todos los tests
     tm.run_all()
-main
