@@ -4,7 +4,6 @@ import struct
 import os
 import logging
 
-Correct-logs
 # Constants for NVMe Admin Passthru
 NVME_IOCTL_ADMIN_CMD = 0xC0484E41  # IOCTL code for admin commands (from nvme-cli headers)
 ## @class AdminPassthruWrapper
@@ -13,10 +12,6 @@ NVME_IOCTL_ADMIN_CMD = 0xC0484E41  # IOCTL code for admin commands (from nvme-cl
 #  This class provides a Python interface for sending NVMe administration commands
 #  directly to the device using ioctl calls, replicating the behavior of the
 #  "nvme_admin_cmd" structure from the nvme-cli package.
-# IOCTL para comandos Admin Passthru
-NVME_IOCTL_ADMIN_CMD = 0xC0484E41  # tomado de nvme-cli headers
-main
-
 class AdminPassthruWrapper:
     ## @brief Class constructor.
     #  @param device_path NVMe device path (e.g., /dev/nvme0).
@@ -59,11 +54,9 @@ class AdminPassthruWrapper:
         self.logger.debug(f"Opening device {self.device_path} for passthru command...")
         fd = os.open(self.device_path, os.O_RDWR)
 
- Correct-logs
         # Allocate buffer
         #! Data buffer to receive the command response
         # Buffer de datos
-main
         data_buf = bytearray(data_len)
 
         # NVMe passthru struct from nvme-cli:

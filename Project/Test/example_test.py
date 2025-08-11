@@ -1,14 +1,12 @@
 #!/bin/env python3.9
 import subprocess
 import json
-Correct-logs
 ## @class ExampleTest
 #  @brief Test example to compare the output of the 'nvme id-ctrl' command with reference data.
 #
 #  This class runs a test that obtains information from the NVMe controller (using 'nvme-cli' or
 #  a wrapper such as 'AdminPassthruWrapper'), converts it to JSON, and compares it against a reference file
 #  to validate that there are no discrepancies.
-main
 class ExampleTest:
     ## @brief Class constructor.
     #  @param nvme_interface Optional interface for sending NVMe commands (e.g., AdminPassthruWrapper).
@@ -17,7 +15,7 @@ class ExampleTest:
         self.nvme_interface = nvme_interface
         self.logger = logger or print
         self.ignore_fields = {"sn", "fguid", "unvmcap", "subnqn"}
-        ## @brief Runs the 'nvme id-ctrl' comparison test.
+    ## @brief Runs the 'nvme id-ctrl' comparison test.
     #
     #  @details
     #  The test follows these steps:
@@ -43,7 +41,7 @@ class ExampleTest:
 
     def run(self):
         self.logger.info("Starting Example Test: Compare nvme id-ctrl output")
-
+        # Step 1: Get id-ctrl data
         if self.nvme_interface:
             self.logger.debug("Collecting id-ctrl data via Admin Passthru...")
             output = self.nvme_interface.send_passthru_cmd(opcode='0x06', data_len=4096)
@@ -51,14 +49,13 @@ class ExampleTest:
         else:
             self.logger.debug("Collecting id-ctrl data via NVMe CLI...")
             output = subprocess.check_output(['nvme', 'id-ctrl', '/dev/nvme0'], text=True)
-
+        # Step 2: Parse to JSON
         try:
             current_data = json.loads(output)
         except json.JSONDecodeError:
             self.logger.error("Failed to parse nvme id-ctrl output as JSON")
             return
 
-Correct-logs
         # Step 3: Load reference JSON
         with open('/root/Team3_REPO/NVME-PROJECT/Project/Test/id-ctrl-main.json', 'r') as f:
             reference_data = json.load(f)
@@ -66,7 +63,6 @@ Correct-logs
         with open('id-ctrl-main.json', 'r') as f:
             reference_data = json.load(f)
 
-main
         errors = 0
         for key, expected_value in reference_data.items():
             if key in self.ignore_fields:
@@ -77,7 +73,7 @@ main
                 errors += 1
             else:
                 self.logger.debug(f"Match in '{key}': {expected_value}")
-
+        # Step 5: Final result
         if errors == 0:
             self.logger.info("Test PASSED - All fields match.")
         else:

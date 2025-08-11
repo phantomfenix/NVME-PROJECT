@@ -2,7 +2,6 @@
 
 import logging
 import sys
-Correct-logs
 import os
 from datetime import datetime
 
@@ -18,7 +17,6 @@ def setup_logger(name='test_manager_logger', base_dir='/root/Team3_REPO/NVME-PRO
     log_file = os.path.join(log_dir, f'test_manager_{datetime.now().strftime("%H-%M-%S")}.log')
 
 def setup_logger(name='test_manager_logger', log_file='test_manager.log', level=logging.DEBUG):
-main
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
