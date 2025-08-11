@@ -2,8 +2,23 @@
 
 import logging
 import sys
+Correct-logs
+import os
+from datetime import datetime
+
+#def setup_logger(name='test_manager_logger', log_file='test_manager.log', level=logging.DEBUG):
+    
+def setup_logger(name='test_manager_logger', base_dir='/root/Team3_REPO/NVME-PROJECT/Project/Result', level=logging.DEBUG):
+    #Create folder with date
+    fecha_hoy = datetime.now().strftime('%Y-%m-%d')
+    log_dir = os.path.join(base_dir, fecha_hoy)
+    os.makedirs(log_dir, exist_ok=True)
+
+    # File name with time
+    log_file = os.path.join(log_dir, f'test_manager_{datetime.now().strftime("%H-%M-%S")}.log')
 
 def setup_logger(name='test_manager_logger', log_file='test_manager.log', level=logging.DEBUG):
+main
     logger = logging.getLogger(name)
     logger.setLevel(level)
 

@@ -1,9 +1,31 @@
 #!/bin/env python3.9
 import subprocess
 
+## @brief Executes an NVMe Admin Passthru command to test low-level NVMe functionality.
+#  @param logger Logger object for logging debug messages and information.
+#  @return Message indicating the success of the command execution.
+#  @throws subprocess.CalledProcessError If the NVMe command fails to execute.
+
 def AdminPassthruTest(logger):
     """
     Executes an NVMe Admin Passthru command to test low-level NVMe functionality.
+@details
+    This function executes an NVMe Admin Passthru command using the
+    command line tool `nvme`. The command used corresponds to the
+    “Identify Controller” operation (opcode 0x06) and reads 4096 bytes of data from the specified NVMe controller.
+    
+    The execution flow is as follows:
+    - Defines the command parameters (opcode, cdw10, cdw11, cdw12, data size, etc.).
+    - Build the list of arguments for the `nvme admin-passthru` command.
+    - Record the parameters and the command to be executed in the logger.
+    - Execute the command using `subprocess.check_output`.
+    - Capture and record any errors in the execution.
+
+    Example of generated command:
+    @code
+    nvme admin-passthru /dev/nvme0n1 --opcode=0x06 --cdw10=0 --cdw11=0 --cdw12=0 --namespace-id=1 --data-len=4096 --read
+    @endcode
+  
     """
     nvme_device = "/dev/nvme0n1"
     opcode = "0x06"  # Identify Controller
