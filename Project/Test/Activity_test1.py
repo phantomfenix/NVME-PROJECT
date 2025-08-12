@@ -1,13 +1,13 @@
 #!/bin/env python3.9
 import subprocess
 import json
-## @class ExampleTest
+## @class Activitytest1
 #  @brief Test example to compare the output of the 'nvme id-ctrl' command with reference data.
 #
 #  This class runs a test that obtains information from the NVMe controller (using 'nvme-cli' or
 #  a wrapper such as 'AdminPassthruWrapper'), converts it to JSON, and compares it against a reference file
 #  to validate that there are no discrepancies.
-class ExampleTest:
+class Activitytest1:
     ## @brief Class constructor.
     #  @param nvme_interface Optional interface for sending NVMe commands (e.g., AdminPassthruWrapper).
     #  @param logger Logger instance for logging information, warnings, and errors.
@@ -56,13 +56,34 @@ class ExampleTest:
             self.logger.error("Failed to parse nvme id-ctrl output as JSON")
             return
 
-        # Step 3: Load reference JSON
-        with open('/root/Team3_REPO/NVME-PROJECT/Project/Test/id-ctrl-main.json', 'r') as f:
-            reference_data = json.load(f)
-        # Step 4: Compare
-        with open('id-ctrl-main.json', 'r') as f:
+        # Step 3: Ask user which reference JSON to use
+        json_options = [
+            "id-ctrl-main_good.json",
+            "id-ctrl-main_bad.json"
+        ]
+        self.logger.info("Available reference JSON files:")
+        for i, fname in enumerate(json_options, start=1):
+            print(f"{i}) {fname}")
+
+        choice = input("Select reference file [1/2]: ").strip()
+        try:
+            selected_file = json_options[int(choice) - 1]
+        except (ValueError, IndexError):
+            self.logger.error("Invalid selection. Using default: id-ctrl-main_good.json")
+            selected_file = "id-ctrl-main_good.json"
+
+        reference_path = os.path.join(
+            "/root/Team3_REPO/NVME-PROJECT/Project/Test", selected_file
+        )
+
+        if not os.path.exists(reference_path):
+            self.logger.error(f"Reference file not found: {reference_path}")
+            return
+
+        with open(reference_path, 'r') as f:
             reference_data = json.load(f)
 
+        # Step 4: Compare
         errors = 0
         for key, expected_value in reference_data.items():
             if key in self.ignore_fields:
@@ -73,6 +94,7 @@ class ExampleTest:
                 errors += 1
             else:
                 self.logger.debug(f"Match in '{key}': {expected_value}")
+
         # Step 5: Final result
         if errors == 0:
             self.logger.info("Test PASSED - All fields match.")
