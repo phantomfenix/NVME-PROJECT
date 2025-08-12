@@ -7,7 +7,7 @@ from Test.admin_passthru_wrapper import AdminPassthruWrapper
 
 # Puedes seguir agregando más pruebas aquí
 # from tests.otra_prueba import OtraPrueba
-
+## @class Activitytest2
 class test3:
     def main():
         serial = "12345678"  # Reemplaza con el serial real del drive

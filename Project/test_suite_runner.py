@@ -1,51 +1,36 @@
 #!/bin/env python3.9
-## @file main.py
-#  @brief Main entry point for the NVMe testing system.
-#
-#  This script initializes the Test Manager (**TestManager**), asks
-#  the user if they want to use **Admin Passthru**, registers the available tests
-#  and runs them.
-#
-#  @details
-#  - The default device path is '/dev/nvme0'.
-#  - Root privileges are required for **Admin Passthru** mode.
-#  - If **Admin Passthru** is not used, NVMe CLI commands are executed directly.
-#
-#  @note
-#  Example usage:
-#  @code
-#  $ python main.py
-#  Do you want to use Admin Passthru? (y/n): y
-#  @endcode
-
 from test_manager import TestManager
 from Test.admin_passthru_wrapper import AdminPassthruWrapper
 from Test.Activity_test1 import Activitytest1
-
+from Test.Activity_test2 import Activitytest2
+from Test.Activity_test3 import Activitytest3
 
 if __name__ == "__main__":
-    ## @brief Ask user whether to enable Admin Passthru.
-    #  @return Boolean indicating if Admin Passthru should be enabled.
+    # Question if to use Admin Passthru
     use_passthru = input("Do you want to use Admin Passthru? (y/n): ").strip().lower() == 'y'
-    ## @brief NVMe Admin Passthru interface wrapper instance.
-    #  @details Initialized only if user chooses 'y' above.
-    admin_wrapper = None
-    if use_passthru:
-        admin_wrapper = AdminPassthruWrapper("/dev/nvme0")
-        
-    ## @brief Create TestManager instance with or without Admin Passthru.
-    tm = TestManager(admin_wrapper=admin_wrapper)
-    ## @brief Record available Test.
-    # Register tests
-    tm.add_test("Activity test1", Activitytest1)
-    ## @brief Run all registered tests.
-    # Run all registered tests
-    tm.run_all()
-    # Reset (optional, depending on the execution flow)
+    admin_wrapper = AdminPassthruWrapper("/dev/nvme0") if use_passthru else None
+
+    # Create an instance of the TestManager
     tm = TestManager(admin_wrapper=admin_wrapper)
 
-    # Registrar tests
-    tm.add_test("Activity test1", Activitytest1)
+    # Record all tests
+    available_tests = {
+        "1": ("Activity test1", Activitytest1),
+        "2": ("Activity test2", Activitytest2),
+        "3": ("Activity test3", Activitytest3)
+    }
 
-    # Ejecutar todos los tests
-    tm.run_all()
+    # Show selection menu
+    print("\nAvailable tests:")
+    for key, (name, _) in available_tests.items():
+        print(f"{key}) {name}")
+
+    choice = input("Select the test to run (1-3): ").strip()
+
+    # Validate selection
+    if choice in available_tests:
+        name, test_class = available_tests[choice]
+        tm.add_test(name, test_class)
+        tm.run_all()
+    else:
+        print("❌ Invalid selection. Exiting...")
