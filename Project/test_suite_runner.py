@@ -20,7 +20,7 @@
 
 from test_manager import TestManager
 from Test.admin_passthru_wrapper import AdminPassthruWrapper
-from Test.example_test import ExampleTest
+from Test.Activity_test1 import Activitytest1
 
 
 if __name__ == "__main__":
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     tm = TestManager(admin_wrapper=admin_wrapper)
     ## @brief Record available Test.
     # Register tests
-    tm.add_test("Example Test", ExampleTest)
+    tm.add_test("Activity test1", Activitytest1)
     ## @brief Run all registered tests.
     # Run all registered tests
     tm.run_all()
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     tm = TestManager(admin_wrapper=admin_wrapper)
 
     # Registrar tests
-    tm.add_test("Example Test", ExampleTest)
+    tm.add_test("Activity test1", Activitytest1)
 
     # Ejecutar todos los tests
     tm.run_all()
