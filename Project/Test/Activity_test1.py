@@ -48,7 +48,7 @@ class Activitytest1:
             raise NotImplementedError("Binary parsing for passthru not yet implemented")
         else:
             self.logger.debug("Collecting id-ctrl data via NVMe CLI...")
-            output = subprocess.check_output(['nvme', 'id-ctrl', '/dev/nvme0'], text=True)
+            output = subprocess.check_output(['nvme', 'id-ctrl', '/dev/nvme0', '--output-format=json'], text=True)
         # Step 2: Parse to JSON
         try:
             current_data = json.loads(output)
@@ -58,8 +58,8 @@ class Activitytest1:
 
         # Step 3: Ask user which reference JSON to use
         json_options = [
-            "id-ctrl-main_good.json",
-            "id-ctrl-main_bad.json"
+            "/root/Team3_REPO/NVME-PROJECT/Project/Test/id-ctrl-main_good.json",
+            "/root/Team3_REPO/NVME-PROJECT/Project/Test/id-ctrl-main_bad.json"
         ]
         self.logger.info("Available reference JSON files:")
         for i, fname in enumerate(json_options, start=1):
@@ -70,7 +70,7 @@ class Activitytest1:
             selected_file = json_options[int(choice) - 1]
         except (ValueError, IndexError):
             self.logger.error("Invalid selection. Using default: id-ctrl-main_good.json")
-            selected_file = "id-ctrl-main_good.json"
+            selected_file = "/root/Team3_REPO/NVME-PROJECT/Project/Test/id-ctrl-main_good.json"
 
         reference_path = os.path.join(
             "/root/Team3_REPO/NVME-PROJECT/Project/Test", selected_file

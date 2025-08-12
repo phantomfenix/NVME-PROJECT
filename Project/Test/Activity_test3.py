@@ -7,14 +7,11 @@ from Test.admin_passthru_wrapper import AdminPassthruWrapper
 
 # Puedes seguir agregando más pruebas aquí
 # from tests.otra_prueba import OtraPrueba
-## @class Activitytest2
-class test3:
-    def main():
-        serial = "12345678"  # Reemplaza con el serial real del drive
-        tests_to_run = [
-            ("AdminPassthruTest", AdminPassthruWrapper),
-            #("ExampleTest", ExampleTest)
-        ]
+## @class Activitytest3
+class Activitytest3:
+    def __init__(self, nvme_interface=None, Logger=None):
+        self.nvme_interface = nvme_interface
+        self.logger = logger or print 
 
     def run_test(self):
         drive = "/dev/nvme0"
