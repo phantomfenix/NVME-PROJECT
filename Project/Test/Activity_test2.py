@@ -1,6 +1,7 @@
 #!/bin/env python3.9
 import subprocess
 import json
+import os
 ## @class Activitytest2
 class Activitytest2:
     def __init__(self, nvme_interface=None, Logger=None):

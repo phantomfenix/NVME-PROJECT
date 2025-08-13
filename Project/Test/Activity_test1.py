@@ -1,6 +1,7 @@
 #!/bin/env python3.9
 import subprocess
 import json
+import os
 ## @class Activitytest1
 #  @brief Test example to compare the output of the 'nvme id-ctrl' command with reference data.
 #
