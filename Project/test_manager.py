@@ -15,8 +15,6 @@ def setup_logger(name='test_manager_logger', base_dir='/root/Team3_REPO/NVME-PRO
 
     # File name with time
     log_file = os.path.join(log_dir, f'test_manager_{datetime.now().strftime("%H-%M-%S")}.log')
-
-def setup_logger(name='test_manager_logger', log_file='test_manager.log', level=logging.DEBUG):
     logger = logging.getLogger(name)
     logger.setLevel(level)
 
