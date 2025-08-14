@@ -1,13 +1,12 @@
 #!/bin/env python3.9
 import subprocess
-import json
-import os
-## @class SmartLogTest
+import random
+## @class Activitytest2
 #  @brief Test to validate that the NVMe SMART log is working as expected.
 #
 #  This test uses Admin Passthru to collect SMART log data and validate multiple health parameters.
 #  It also executes read/write operations to confirm that counters increment correctly.
-class SmartLogTest:
+class Activitytest2:
     def __init__(self, nvme_interface=None, logger=None):
         self.nvme_interface = nvme_interface
         self.logger = logger or print
@@ -52,11 +51,11 @@ class SmartLogTest:
 
         # Execute N reads
         for _ in range(N):
-            subprocess.run(["nvme", "read", "/dev/nvme0", "--start-block=0", "--block-count=1"], stdout=subprocess.DEVNULL)
+            subprocess.run(["nvme", "read", "/dev/nvme0n1", "--start-block=0", "--block-count=1", "--data-size=1024"], stdout=subprocess.DEVNULL)
 
         # Execute N writes
         for _ in range(N):
-            subprocess.run(["nvme", "write", "/dev/nvme0", "--start-block=0", "--block-count=1", "--data=/dev/zero"], stdout=subprocess.DEVNULL)
+            subprocess.run(["nvme", "write", "/dev/nvme0n1", "--start-block=0", "--block-count=1", "--data-size=1024", "--data=/dev/zero"], stdout=subprocess.DEVNULL)
 
         # Step 7: Change temperature threshold to trigger critical warning
         self._set_temperature_threshold(current_temp - 5)
@@ -86,15 +85,11 @@ class SmartLogTest:
         self.logger.info("Test PASSED - SMART log behaves as expected.")
 
     def _get_smart_log(self):
-        output = self.nvme_interface.send_passthru_cmd(opcode="0x02", data_len=512)
-        try:
-            return json.loads(output)
-        except json.JSONDecodeError:
-            self.logger.error("Failed to parse SMART log output as JSON")
-            return {}
+        output = self.nvme_interface.send_passthru_cmd(opcode=0x02, data_len=512, cdw10=0x007F0002)
+        return self.nvme_interface.parse_smart_log(output)
 
     def _get_temperature_threshold(self):
-        output = subprocess.check_output(["nvme", "get-feature", "/dev/nvme0", "--fid=0x4"], text=True)
+        output = subprocess.check_output(["nvme", "get-feature", "/dev/nvme0", "-f=0x4"], text=True)
         # Extract numeric threshold from output
         for line in output.splitlines():
             if "value" in line.lower():
@@ -105,4 +100,4 @@ class SmartLogTest:
         return 0
 
     def _set_temperature_threshold(self, new_temp):
-        subprocess.run(["nvme", "set-feature", "/dev/nvme0", "--fid=0x4", f"--value={new_temp}"])
+        subprocess.run(["nvme", "set-feature", "/dev/nvme0", "-f=0x4", f"--value={new_temp}"])
