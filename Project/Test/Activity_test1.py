@@ -2,43 +2,19 @@
 import subprocess
 import json
 import os
+import glob
 ## @class Activitytest1
 #  @brief Test example to compare the output of the 'nvme id-ctrl' command with reference data.
 #
 #  This class runs a test that obtains information from the NVMe controller (using 'nvme-cli' or
 #  a wrapper such as 'AdminPassthruWrapper'), converts it to JSON, and compares it against a reference file
 #  to validate that there are no discrepancies.
+
 class Activitytest1:
-    ## @brief Class constructor.
-    #  @param nvme_interface Optional interface for sending NVMe commands (e.g., AdminPassthruWrapper).
-    #  @param logger Logger instance for logging information, warnings, and errors.
     def __init__(self, nvme_interface=None, logger=None):
         self.nvme_interface = nvme_interface
         self.logger = logger or print
         self.ignore_fields = {"sn", "fguid", "unvmcap", "subnqn"}
-    ## @brief Runs the 'nvme id-ctrl' comparison test.
-    #
-    #  @details
-    #  The test follows these steps:
-    #  1. Obtains NVMe controller information ('id-ctrl') using:
-    #     - The passthru interface if available, or
-    #     - The 'nvme-cli' command if it is not.
-    #  2. Converts the output to JSON format.
-    #  3. Loads a reference file ('id-ctrl-main.json').
-    #  4. Compares the fields, ignoring those defined in 'ignore_fields'.
-    #  5. Displays the comparison result.
-    #
-    #  @note
-    #  If 'nvme_interface' is present, it is assumed to return binary data, so a
-    #  binary-to-JSON parser would need to be implemented (not yet implemented).
-    #
-    #  @exception NotImplementedError If attempting to use the passthru interface without a binary parser implemented.
-    #  @exception json.JSONDecodeError If the output of 'nvme id-ctrl' is not valid JSON.
-    #
-    #  @code
-    #  test = ExampleTest()
-    #  test.run()
-    #  @endcode
 
     def run(self):
         self.logger.info("Starting Example Test: Compare nvme id-ctrl output")
@@ -58,30 +34,34 @@ class Activitytest1:
             return
 
         # Step 3: Ask user which reference JSON to use
-        json_options = [
-            "/root/Team3_REPO/NVME-PROJECT/Project/Test/id-ctrl-main_good.json",
-            "/root/Team3_REPO/NVME-PROJECT/Project/Test/id-ctrl-main_bad.json"
-        ]
+        BASE_DIR = os.environ.get("NVME_PROJECT_DIR") or os.path.dirname(os.path.abspath(__file__))
+        if os.path.basename(BASE_DIR) == "Test":
+            REF_DIR = BASE_DIR
+        else:
+            REF_DIR = os.path.join(BASE_DIR, "Test")
+
+        json_options = glob.glob(os.path.join(REF_DIR, "id-ctrl-main_*.json"))
+
+        if not json_options:
+            self.logger.error(f"No reference JSON files found in {REF_DIR}")
+            return
+
         self.logger.info("Available reference JSON files:")
         for i, fname in enumerate(json_options, start=1):
             print(f"{i}) {fname}")
 
         choice = input("Select reference file [1/2]: ").strip()
         try:
-            selected_file = json_options[int(choice) - 1]
+           selected_file = json_options[int(choice) - 1]
         except (ValueError, IndexError):
             self.logger.error("Invalid selection. Using default: id-ctrl-main_good.json")
-            selected_file = "/root/Team3_REPO/NVME-PROJECT/Project/Test/id-ctrl-main_good.json"
+            selected_file = json_options[0]
 
-        reference_path = os.path.join(
-            "/root/Team3_REPO/NVME-PROJECT/Project/Test", selected_file
-        )
-
-        if not os.path.exists(reference_path):
-            self.logger.error(f"Reference file not found: {reference_path}")
+        if not os.path.exists(selected_file):
+            self.logger.error(f"Reference file not found: {selected_file}")
             return
-
-        with open(reference_path, 'r') as f:
+        
+        with open(selected_file, 'r') as f:
             reference_data = json.load(f)
 
         # Step 4: Compare
