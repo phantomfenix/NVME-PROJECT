@@ -27,7 +27,9 @@ if __name__ == "__main__":
     # Question if to use Admin Passthru
     use_passthru = input("Do you want to use Admin Passthru? (y/n): ").strip().lower() == 'y'
     admin_wrapper = AdminPassthruWrapper("/dev/nvme0") if use_passthru else None
-
+    
+    # Print header
+    print_header(use_passthru)
     # Create an instance of the TestManager
     tm = TestManager(admin_wrapper=admin_wrapper)
 
