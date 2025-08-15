@@ -2,6 +2,8 @@
 import struct
 import json
 import subprocess
+import tempfile
+import os
 from datetime import datetime
 from Test.admin_passthru_wrapper import AdminPassthruWrapper
 
@@ -89,10 +91,21 @@ class Activitytest3:
 
         # --- Paso 7: Ejecutar escritura para cambiar nuse ---
         self.logger.info("[Paso 7] Ejecutando nvme write para modificar nuse")
-        subprocess.run([
-            "nvme", "write", f"{drive}n{ns_id}",
-            "--data-size=8192", "--offset=0"
-        ], check=True)
+        
+        tmp = tempfile.NamedTemporaryFile(delete=False)
+        try:
+           tmp.write(b'\x00' * 8192)  # 8 KiB de ceros
+           tmp.flush()
+           tmp.close()  # cerrar antes de pasar al comando
+           subprocess.run([
+               "nvme", "write", f"{drive}n{ns_id}",
+               "-s", "0",                # primer bloque
+               "-c", "2",                # escribir 1 bloque de 4KiB
+               "-d", tmp.name,
+               "-z", "8192"
+           ], check=True)
+        finally:
+           os.unlink(tmp.name)
 
         # --- Paso 8: Smart-log final ---
         status_after = "statusDespues.json"
