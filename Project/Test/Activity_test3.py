@@ -1,7 +1,7 @@
-import sys
+#!/bin/env python3.9
+import struct
 import json
 import subprocess
-import os
 from datetime import datetime
 from Test.admin_passthru_wrapper import AdminPassthruWrapper
 
@@ -11,122 +11,130 @@ class Activitytest3:
         self.logger = logger
         self.result = "NOT RUN"
 
+    def parse_identify_namespace(self, data_bytes):
+        """Parses Identify Namespace data structure from NVMe spec."""
+        nsize = struct.unpack_from("<Q", data_bytes, 0)[0]    # bytes 0-7
+        ncap = struct.unpack_from("<Q", data_bytes, 8)[0]     # bytes 8-15
+        nuse = struct.unpack_from("<Q", data_bytes, 16)[0]    # bytes 16-23
+        flbas = data_bytes[26]                                # byte 26
+        dps = data_bytes[30]                                  # byte 30
+        lbaf = flbas & 0x0F                                   # bits 0-3 de flbas
+        return {
+            "nsize": nsize,
+            "ncap": ncap,
+            "nuse": nuse,
+            "flbas": flbas,
+            "lbaf": lbaf,
+            "dps": dps
+        }
+
     def run(self):
         self.logger.info("Starting Activitytest3 with Admin Passthru...")
 
-        try:
-            # --- Admin Passthru: Identify Controller ---
-            self.logger.debug("Sending Identify Controller command via Admin Passthru...")
-            output = self.nvme_interface.send_passthru_cmd(opcode='0x06', data_len=4096)
-            hex_preview = output[:64].hex(" ") if output else ""
-            parsed_data = {
-                "raw_hex_preview": hex_preview,
-                "total_bytes": len(output) if output else 0
-            }
-            self.logger.info(f"Collected Identify Controller Data: {parsed_data}")
-        except Exception as e:
-            self.logger.exception(f"Error during Admin Passthru command: {e}")
-            self.result = "FAILED"
-            return
-
-        # --- Paths y nombres de logs únicos ---
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         drive = "/dev/nvme0"
-        ns_id = "1"
-        delete = "0xFFFFFFFF"
-        lba_size = "4096"
+        ns_id = "1"  # namespace ID
+        delete_all = "0xFFFFFFFF"
+        # Definiciones esperadas
+        nsize_expected = 4096  # en LBAs
+        ncap_expected = 4096
+        lbaf_expected = 0      # formato index 0 para 4KiB
+        dps_expected = 0       # sin protección
 
-        status_before = f"statusAntes_drive_{timestamp}.log"
-        status_after = f"statusDespues_drive_{timestamp}.log"
-
-        # --- Paso 1: Smart-log inicial ---
-        self.logger.info("[Paso 1] Smart-log inicial")
+        # --- Paso 1: ID-NS inicial vía Admin Passthru ---
         try:
-            with open(status_before, "w") as f:
-                subprocess.run(
-                    ["nvme", "smart-log", drive, "-o", "json"],
-                    stdout=f, check=True
-                )
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"Failed to run smart-log: {e}")
+            self.logger.debug("Getting initial Identify Namespace via Admin Passthru...")
+            id_ns_before_bytes = self.nvme_interface.send_passthru_cmd(
+                opcode='0x06',
+                data_len=4096,
+                nsid=int(ns_id)
+            )
+            with open("id_ns_before.bin", "wb") as f:
+                f.write(id_ns_before_bytes)
+            id_ns_before = self.parse_identify_namespace(id_ns_before_bytes)
+            self.logger.info(f"Initial ID-NS: {id_ns_before}")
+        except Exception as e:
+            self.logger.exception(f"Error getting initial ID-NS: {e}")
             self.result = "FAILED"
             return
 
-        # --- Paso 2: Estado inicial con nvme list ---
-        self.logger.info("[Paso 2] Estado inicial con nvme list")
-        subprocess.run(["nvme", "list"], check=True)
+        # --- Paso 2: Smart-log inicial ---
+        status_before = "statusAntes.json"
+        self.logger.info("[Paso 2] Smart-log inicial")
+        subprocess.run(["nvme", "smart-log", drive, "-o", "json"], stdout=open(status_before, "w"), check=True)
 
         # --- Paso 3: Eliminar namespace ---
         self.logger.info("[Paso 3] Eliminando namespace")
-        subprocess.run(["nvme", "delete-ns", drive, "-n", delete], check=True)
+        subprocess.run(["nvme", "delete-ns", drive, "-n", delete_all], check=True)
 
         # --- Paso 4: Crear namespace ---
         self.logger.info("[Paso 4] Creando namespace")
         subprocess.run([
             "nvme", "create-ns", drive,
-            "-s", lba_size, "-c", lba_size, "-f", "0"
+            "-s", str(nsize_expected),
+            "-c", str(ncap_expected),
+            "-f", str(lbaf_expected)
         ], check=True)
 
         # --- Paso 5: Adjuntar namespace ---
         self.logger.info("[Paso 5] Adjuntando namespace")
+        subprocess.run(["nvme", "attach-ns", drive, "-n", ns_id, "-c", "0"], check=True)
+
+        # --- Paso 6: Cambiar block size (Format) ---
+        self.logger.info("[Paso 6] Cambiando block size con nvme format")
         subprocess.run([
-            "nvme", "attach-ns", drive,
-            "-n", ns_id, "-c", "0"
+            "nvme", "format", f"{drive}n{ns_id}",
+            "-l", str(lbaf_expected),
+            "-f", "0"
         ], check=True)
 
-        # --- Paso 6: Resetear controlador ---
-        self.logger.info("[Paso 6] Reseteando controlador")
-        subprocess.run(["nvme", "reset", drive], check=True)
-
-        # --- Paso 7: Estado final con nvme list ---
-        self.logger.info("[Paso 7] Estado final con nvme list")
-        subprocess.run(["nvme", "list"], check=True)
+        # --- Paso 7: Ejecutar escritura para cambiar nuse ---
+        self.logger.info("[Paso 7] Ejecutando nvme write para modificar nuse")
+        subprocess.run([
+            "nvme", "write", f"{drive}n{ns_id}",
+            "--data-size=8192", "--offset=0"
+        ], check=True)
 
         # --- Paso 8: Smart-log final ---
+        status_after = "statusDespues.json"
         self.logger.info("[Paso 8] Smart-log final")
+        subprocess.run(["nvme", "smart-log", drive, "-o", "json"], stdout=open(status_after, "w"), check=True)
+
+        # --- Paso 9: ID-NS final vía Admin Passthru ---
         try:
-            with open(status_after, "w") as f:
-                subprocess.run(
-                    ["nvme", "smart-log", drive, "-o", "json"],
-                    stdout=f, check=True
-                )
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"Failed to run smart-log after test: {e}")
+            self.logger.debug("Getting final Identify Namespace via Admin Passthru...")
+            id_ns_after_bytes = self.nvme_interface.send_passthru_cmd(
+                opcode='0x06',
+                data_len=4096,
+                nsid=int(ns_id)
+            )
+            with open("id_ns_after.bin", "wb") as f:
+                f.write(id_ns_after_bytes)
+            id_ns_after = self.parse_identify_namespace(id_ns_after_bytes)
+            self.logger.info(f"Final ID-NS: {id_ns_after}")
+        except Exception as e:
+            self.logger.exception(f"Error getting final ID-NS: {e}")
             self.result = "FAILED"
             return
 
-        # --- Paso 9: Comparación de Smart-log ---
-        self.logger.info("[Paso 9] Comparando cambios en Smart-log")
-        try:
-            with open(status_before) as f_before, open(status_after) as f_after:
-                before_data = json.load(f_before)
-                after_data = json.load(f_after)
-        except json.JSONDecodeError as e:
-            self.logger.error(f"Failed to parse smart-log JSON: {e}")
-            self.result = "FAILED"
-            return
+        # --- Paso 10: Validaciones ---
+        self.logger.info("[Paso 10] Validando resultados")
 
-        # Validación de block size: comparar lbaf si existe
-        block_size_changed = False
-        if "lbaf" in before_data and "lbaf" in after_data:
-            block_size_changed = before_data["lbaf"] != after_data["lbaf"]
-        else:
-            self.logger.warning("lbaf key not found; assuming block size changed")
-            block_size_changed = True  # fallback
+        # Validación block size (lbaf y dps)
+        blocksize_ok = (
+            id_ns_after["lbaf"] == lbaf_expected and
+            id_ns_after["dps"] == dps_expected
+        )
 
-        # Validación de nuse
-        before_nuse = before_data.get("nuse")
-        after_nuse = after_data.get("nuse")
-        if before_nuse is None or after_nuse is None:
-            self.logger.warning("'nuse' key not found; skipping nuse check")
-            nuse_increased = True
-        else:
-            nuse_increased = after_nuse > before_nuse
+        # Validación nuse (debe aumentar)
+        nuse_ok = id_ns_after["nuse"] > id_ns_before["nuse"]
 
-        # Resultado final
-        if block_size_changed and nuse_increased:
-            self.logger.info("Test PASSED")
+        # Validación nsize y ncap
+        nsize_ok = id_ns_after["nsize"] == nsize_expected
+        ncap_ok = id_ns_after["ncap"] == ncap_expected
+
+        if blocksize_ok and nuse_ok and nsize_ok and ncap_ok:
             self.result = "PASSED"
+            self.logger.info("Test PASSED")
         else:
-            self.logger.error("Test FAILED")
             self.result = "FAILED"
+            self.logger.error(f"Test FAILED - blocksize_ok={blocksize_ok}, nuse_ok={nuse_ok}, nsize_ok={nsize_ok}, ncap_ok={ncap_ok}")
